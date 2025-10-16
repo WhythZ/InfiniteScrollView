@@ -3,61 +3,60 @@ using System.Collections.Generic;
 using System.Linq;
 
 //滚动列表样式，垂直或水平
-public enum InfiniteScrollDirection
+public enum ScrollDirection
 {
     Vertical,
     Horizontal
 }
 
-//用来表示多行或多列的数据
+//垂直样式则表示一行TGrid，水平模式则表示一列TGrid，对象池中存入的是一行或一列的整体而不必然是单个TGrid
 public class GridBundle<TGrid> : IPoolObject where TGrid : MonoBehaviour
 {
+    public TGrid[] Grids { get; private set; }
     public int index;
     public Vector2 position;
-    public TGrid[] Grids { get; private set; }
-    public int CellCapacity => Grids.Length;
-    public GridBundle(int gameObjectCapacity)
+
+    //传入行或列数量进行构造
+    public GridBundle(int _goCapacity)
     {
-        Grids = new TGrid[gameObjectCapacity];
+        Grids = new TGrid[_goCapacity];
     }
-    public void Clear()
+
+    //隐藏该行或列的所有元素
+    public void HideAllGrids()
     {
         index = -1;
         foreach (var _grid in Grids)
         {
             if (_grid != null)
-            {
                 _grid.gameObject.SetActive(false);
-            }
         }
     }
 }
 
 //通过继承并实现此抽象类来使用滚动列表功能（修饰partial表示该类的定义可以被拆分到多个文件中）
+//TGrid传入滚动列表元素的MonoBehaviour子类类型（对应类脚本挂载在元素预制体上），TGridData传入TGrid对应的数据存储结构体类型
 public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehaviour where TGrid : MonoBehaviour
 {
-    public InfiniteScrollDirection viewDirection;
+    [SerializeField] private ScrollDirection scrollDir;
+    [SerializeField] protected TGrid gridPrefab;          //挂载TGrid类型脚本的列表元素预制体
+    [SerializeField] protected RectTransform contentRect; //对象Viewport下存放列表元素的子对象
+    [SerializeField] private Vector2 gridSpacing;         //设置Grid间的水平或垂直方向上的间距
+    [SerializeField] private int rowOrColCount;           //垂直则表每行数量，水平则为每列数量
+    private RectTransform parentRect;                     //自动获取持有ScrollRect的那个父对象
 
     public ICollection<TGridData> Datas { get; private set; }
 
-    [SerializeField] protected TGrid gridPrefab;
-    
-    private RectTransform parentRect;
-    [SerializeField] protected RectTransform content;
-
-    [SerializeField] private Vector2 gridSpace; //设置Grid间的水平或垂直方向上的间距
-    [SerializeField] private int rowOrColCount; //垂直则表每行数量，水平则为每列数量
-
-    public Vector2 contentPos => content.position;
-    public Vector2 contentSize => content.sizeDelta;
+    public Vector2 contentPos => contentRect.position;
+    public Vector2 contentSize => contentRect.sizeDelta;
     public Vector2 gridSize => gridRectTransform.sizeDelta;
-    public Vector2 slotSize => gridSize + gridSpace;
-    
+    public Vector2 slotSize => gridSize + gridSpacing;
+
     private RectTransform gridRectTransform;
-    private readonly Vector2 HorizontalContentAnchorMin = new Vector2(0, 0);
-    private readonly Vector2 HorizontalContentAnchorMax = new Vector2(0, 1);
-    private readonly Vector2 VerticalContentAnchorMin = new Vector2(0, 1);
-    private readonly Vector2 VerticalContentAnchorMax = new Vector2(1, 1);
+    private readonly Vector2 horizontalContentAnchorMin = new Vector2(0, 0);
+    private readonly Vector2 horizontalContentAnchorMax = new Vector2(0, 1);
+    private readonly Vector2 verticalContentAnchorMin = new Vector2(0, 1);
+    private readonly Vector2 verticalContentAnchorMax = new Vector2(1, 1);
     private readonly LinkedList<GridBundle<TGrid>> gridBundles = new LinkedList<GridBundle<TGrid>>();
 
     public int ItemCount
@@ -75,11 +74,11 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         parentRect = GetComponent<RectTransform>();
     }
 
-    //Scroll的初始化和数据的长度发生变化都需要使用这个函数,这个函数只涉及到Content的大小的变化
-    public virtual void Initlize(ICollection<TGridData> _datas, bool _resetPos = false)
+    //Scroll的初始化和数据的长度发生变化都需要使用这个函数，该函数只涉及Content的大小变化
+    public virtual void Initialize(ICollection<TGridData> _datas, bool _resetPos = false)
     {
         if (_datas == null)
-            throw new System.Exception("InfiniteScrollView.Initlize接收的数据为空");
+            throw new System.Exception("InfiniteScrollView.Initialize接收的数据为空");
 
         gridRectTransform = gridPrefab.GetComponent<RectTransform>();
         Datas = _datas;
@@ -90,11 +89,11 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         RefrashViewRangeData();
     }
 
-    //刷新一下，数据的长度发生变化的时候使用这个函数
-    public void Refrash(bool _resetContentPos = false)
+    //数据的长度发生变化的时候使用这个函数刷新一下
+    public void Refresh(bool _resetContentPos = false)
     {
         RecalculateContentSize(_resetContentPos);
-        content.anchoredPosition = _resetContentPos ? Vector2.zero : content.anchoredPosition;
+        contentRect.anchoredPosition = _resetContentPos ? Vector2.zero : contentRect.anchoredPosition;
         UpdateDisplay();
         RefrashViewRangeData();
     }
@@ -102,9 +101,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     protected virtual void Update()
     {
         if (Datas == null)
-        {
             return;
-        }
         UpdateDisplay();
     }
 
@@ -131,24 +128,24 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         Vector2 viewRangeSize = parentRect.sizeDelta;
         Vector2 itemSize = slotSize;
         Vector2 cellSize = gridSize;
-        Vector2 cellSpace = gridSpace;
+        Vector2 cellSpace = gridSpacing;
 
-        if (viewDirection == InfiniteScrollDirection.Vertical)
+        if (scrollDir == ScrollDirection.Vertical)
         {
-            Vector2 topPos = -content.anchoredPosition;
+            Vector2 topPos = -contentRect.anchoredPosition;
             Vector2 bottomPos = new Vector2(topPos.x, topPos.y - viewRangeSize.y);
             int startIndex = GetIndex(topPos);
             int endIndex = GetIndex(bottomPos);
             for (int i = startIndex; i <= endIndex && i < itemCount; i++)
             {
-                Vector2 pos = new Vector2(content.anchoredPosition.x, -i * itemSize.y);
+                Vector2 pos = new Vector2(contentRect.anchoredPosition.x, -i * itemSize.y);
                 var bundle = GetGridBundle(i, pos, cellSize, cellSpace);
                 gridBundles.AddLast(bundle);
             }
         }
-        else if (viewDirection == InfiniteScrollDirection.Horizontal)
+        else if (scrollDir == ScrollDirection.Horizontal)
         {
-            Vector2 leftPos = -content.anchoredPosition;
+            Vector2 leftPos = -contentRect.anchoredPosition;
             Vector2 rightPos = new Vector2(leftPos.x + viewRangeSize.x, leftPos.y);
 
             int startIndex = GetIndex(leftPos);
@@ -156,7 +153,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
 
             for (int i = startIndex; i <= endIndex && i < itemCount; i++)
             {
-                Vector2 pos = new Vector2(i * itemSize.x, content.anchoredPosition.y);
+                Vector2 pos = new Vector2(i * itemSize.x, contentRect.anchoredPosition.y);
                 var bundle = GetGridBundle(i, pos, cellSize, cellSpace);
                 gridBundles.AddLast(bundle);
             }
@@ -169,9 +166,9 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         GridBundle<TGrid> bundle = gridBundles.First.Value;
 
         Vector2 offset = default;
-        if (viewDirection == InfiniteScrollDirection.Vertical)
+        if (scrollDir == ScrollDirection.Vertical)
             offset = new Vector2(0, slotSize.y);
-        else if (viewDirection == InfiniteScrollDirection.Horizontal)
+        else if (scrollDir == ScrollDirection.Horizontal)
             offset = new Vector2(-slotSize.x, 0);
 
         Vector2 newHeadBundlePos = bundle.position + offset;
@@ -185,7 +182,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
             if (caculatedIndex != index)
                 Debug.LogError($"计算索引:{caculatedIndex},计数索引{index}计算出的索引和计数的索引值不相等...");
 
-            bundle = GetGridBundle(index, newHeadBundlePos, gridSize, gridSpace);
+            bundle = GetGridBundle(index, newHeadBundlePos, gridSize, gridSpacing);
             gridBundles.AddFirst(bundle);
 
             newHeadBundlePos = bundle.position + offset;
@@ -197,7 +194,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         if (gridBundles.Count == 0)
             return;
 
-        if (viewDirection == InfiniteScrollDirection.Vertical)
+        if (scrollDir == ScrollDirection.Vertical)
         {
             GridBundle<TGrid> bundle = gridBundles.First.Value;
             while (AboveViewRange(bundle.position))
@@ -211,7 +208,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
                 bundle = gridBundles.First.Value;
             }
         }
-        else if (viewDirection == InfiniteScrollDirection.Horizontal)
+        else if (scrollDir == ScrollDirection.Horizontal)
         {
             GridBundle<TGrid> bundle = gridBundles.First.Value;
             while (InViewRangeLeft(bundle.position))
@@ -232,9 +229,9 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         //以尾部元素向外计算出新头部的位置,计算该位置是否在显示区域，如果在显示区域则生成对应项目
         GridBundle<TGrid> bundle = gridBundles.Last.Value;
         Vector2 offset = default;
-        if (viewDirection == InfiniteScrollDirection.Vertical)
+        if (scrollDir == ScrollDirection.Vertical)
             offset = new Vector2(0, -slotSize.y);
-        else if (viewDirection == InfiniteScrollDirection.Horizontal)
+        else if (scrollDir == ScrollDirection.Horizontal)
             offset = new Vector2(slotSize.x, 0);
 
         Vector2 newTailBundlePos = bundle.position + offset;
@@ -248,7 +245,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
             if (caculatedIndex != index)
                 Debug.LogError($"计算索引:{caculatedIndex},计数索引{index}计算出的索引和计数的索引值不相等...");
 
-            bundle = GetGridBundle(index, newTailBundlePos, gridSize, gridSpace);
+            bundle = GetGridBundle(index, newTailBundlePos, gridSize, gridSpacing);
             gridBundles.AddLast(bundle);
 
             newTailBundlePos = bundle.position + offset;
@@ -260,7 +257,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         if (gridBundles.Count == 0)
             return;
 
-        if (viewDirection == InfiniteScrollDirection.Vertical)
+        if (scrollDir == ScrollDirection.Vertical)
         {
             GridBundle<TGrid> bundle = gridBundles.Last.Value;
             while (UnderViewRange(bundle.position))
@@ -274,7 +271,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
                 bundle = gridBundles.Last.Value;
             }
         }
-        else if (viewDirection == InfiniteScrollDirection.Horizontal)
+        else if (scrollDir == ScrollDirection.Horizontal)
         {
             GridBundle<TGrid> bundle = gridBundles.Last.Value;
             while (InViewRangeRight(bundle.position))
@@ -306,13 +303,13 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     public virtual Vector2 CaculateRelativePostion(Vector2 curPosition)
     {
         Vector2 relativePosition = default;
-        if (viewDirection == InfiniteScrollDirection.Horizontal)
+        if (scrollDir == ScrollDirection.Horizontal)
         {
-            relativePosition = new Vector2(curPosition.x + content.anchoredPosition.x, curPosition.y);
+            relativePosition = new Vector2(curPosition.x + contentRect.anchoredPosition.x, curPosition.y);
         }
-        else if (viewDirection == InfiniteScrollDirection.Vertical)
+        else if (scrollDir == ScrollDirection.Vertical)
         {
-            relativePosition = new Vector2(curPosition.x, curPosition.y + content.anchoredPosition.y);
+            relativePosition = new Vector2(curPosition.x, curPosition.y + contentRect.anchoredPosition.y);
         }
         return relativePosition;
     }
@@ -320,12 +317,12 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     public int GetIndex(Vector2 position)
     {
         int index = -1;
-        if (viewDirection == InfiniteScrollDirection.Vertical)
+        if (scrollDir == ScrollDirection.Vertical)
         {
             index = Mathf.RoundToInt(-position.y / slotSize.y);
             return index;
         }
-        else if (viewDirection == InfiniteScrollDirection.Horizontal)
+        else if (scrollDir == ScrollDirection.Horizontal)
         {
             index = Mathf.RoundToInt(position.x / slotSize.x);
         }
@@ -358,11 +355,11 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
 
     public bool OnViewRange(Vector2 position)
     {
-        if (viewDirection == InfiniteScrollDirection.Horizontal)
+        if (scrollDir == ScrollDirection.Horizontal)
         {
             return !InViewRangeLeft(position) && !InViewRangeRight(position);
         }
-        else if (viewDirection == InfiniteScrollDirection.Vertical)
+        else if (scrollDir == ScrollDirection.Vertical)
         {
             return !AboveViewRange(position) && !UnderViewRange(position);
         }

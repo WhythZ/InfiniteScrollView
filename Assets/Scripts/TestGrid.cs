@@ -1,23 +1,23 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 
-//数据结构体
+//类TestGrid对应的数据结构体，实际业务中元素的数据结构通常更为复杂
 [System.Serializable]
 public struct TestGridData
 {
-    public Sprite iconSprite;
-    public string nameString;
+    public Sprite iconSprite; //赋值给Image组件的sprite
+    public string descString; //赋值给Text组件的text
 }
 
-//对应的UI视图
+//挂载在列表元素预制体上的脚本类
 public class TestGrid : MonoBehaviour
 {
-    public Image iconImage;
-    public Text descText;
+    public Image iconImg;
+    public Text descTxt;
 
-    public void UpdateDisplay(Sprite _sprite, string _text)
+    public void RefreshGridView(Sprite _sprite, string _text)
     {
-        iconImage.sprite = _sprite;
-        descText.text = _text;
+        iconImg.sprite = _sprite;
+        descTxt.text = _text;
     }
 }

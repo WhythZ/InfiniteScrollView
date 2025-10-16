@@ -84,21 +84,21 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     public void RecalculateContentSize(bool _resetContentPos)
     {
         int _itemCount = ItemCount;
-        if (viewDirection == InfiniteScrollDirection.Vertical)
+        if (scrollDir == ScrollDirection.Vertical)
         {
-            content.anchorMin = VerticalContentAnchorMin;
-            content.anchorMax = VerticalContentAnchorMax;
-            content.sizeDelta = new Vector2(content.sizeDelta.x, _itemCount * slotSize.y - gridSpace.y);
+            contentRect.anchorMin = verticalContentAnchorMin;
+            contentRect.anchorMax = verticalContentAnchorMax;
+            contentRect.sizeDelta = new Vector2(contentRect.sizeDelta.x, _itemCount * slotSize.y - gridSpacing.y);
         }
-        else if (viewDirection == InfiniteScrollDirection.Horizontal)
+        else if (scrollDir == ScrollDirection.Horizontal)
         {
-            content.anchorMin = HorizontalContentAnchorMin;
-            content.anchorMax = HorizontalContentAnchorMax;
-            content.sizeDelta = new Vector2(_itemCount * slotSize.x - gridSpace.x, content.sizeDelta.y);
+            contentRect.anchorMin = horizontalContentAnchorMin;
+            contentRect.anchorMax = horizontalContentAnchorMax;
+            contentRect.sizeDelta = new Vector2(_itemCount * slotSize.x - gridSpacing.x, contentRect.sizeDelta.y);
         }
         if (_resetContentPos)
         {
-            content.anchoredPosition = Vector2.zero;
+            contentRect.anchoredPosition = Vector2.zero;
         }
     }
 }
