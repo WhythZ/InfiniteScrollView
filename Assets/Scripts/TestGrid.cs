@@ -15,7 +15,7 @@ public class TestGrid : MonoBehaviour
     public Image iconImg;
     public Text descTxt;
 
-    public void RefreshGridView(Sprite _sprite, string _text)
+    public void RefreshView(Sprite _sprite, string _text)
     {
         iconImg.sprite = _sprite;
         descTxt.text = _text;

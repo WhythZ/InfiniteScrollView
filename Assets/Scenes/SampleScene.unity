@@ -279,7 +279,7 @@ GameObject:
   - component: {fileID: 354939826}
   - component: {fileID: 354939829}
   m_Layer: 5
-  m_Name: VerticalScrollView
+  m_Name: TestVerticalScrollView
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -386,18 +386,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a89de333043c9ec4e8786d9e040235cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scrollDir: 0
+  scrollDirection: 0
   gridPrefab: {fileID: 2332130290619924252, guid: d5c7c0ccd6c423949bf6df83e3dac5ce, type: 3}
   contentRect: {fileID: 1048259842}
   gridSpacing: {x: 0, y: 10}
   rowOrColCount: 3
-  dataTemplates:
-  - iconSprite: {fileID: 21300000, guid: 874192bde488c6443b0fdcabfdeebb04, type: 3}
-    descString: Bow
-  - iconSprite: {fileID: 21300000, guid: 4e9a15406ab09a648bdb4bb285ff5c08, type: 3}
-    descString: Ham
-  - iconSprite: {fileID: 21300000, guid: eb6411060152e6748a7a4e08fc4255b7, type: 3}
-    descString: Swd
 --- !u!1 &360237376
 GameObject:
   m_ObjectHideFlags: 0
@@ -1350,7 +1343,7 @@ GameObject:
   - component: {fileID: 1815297062}
   - component: {fileID: 1815297065}
   m_Layer: 5
-  m_Name: HorizontalScrollView
+  m_Name: TestHorizontalScrollView
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1457,18 +1450,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a89de333043c9ec4e8786d9e040235cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  scrollDir: 1
+  scrollDirection: 1
   gridPrefab: {fileID: 2332130290619924252, guid: d5c7c0ccd6c423949bf6df83e3dac5ce, type: 3}
   contentRect: {fileID: 1724153452}
   gridSpacing: {x: 10, y: 0}
   rowOrColCount: 6
-  dataTemplates:
-  - iconSprite: {fileID: 21300000, guid: 874192bde488c6443b0fdcabfdeebb04, type: 3}
-    descString: Bow
-  - iconSprite: {fileID: 21300000, guid: 4e9a15406ab09a648bdb4bb285ff5c08, type: 3}
-    descString: Ham
-  - iconSprite: {fileID: 21300000, guid: eb6411060152e6748a7a4e08fc4255b7, type: 3}
-    descString: Swd
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
