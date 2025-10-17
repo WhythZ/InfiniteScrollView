@@ -14,9 +14,12 @@ public class GridBundle<TGrid> : IPoolObject where TGrid : MonoBehaviour
 {
     //持有的列表元素
     public TGrid[] Grids { get; private set; }
-    public Vector2 position;
+    
+    //该属性意义相当于该Bundle头部Grid的左上角位置，也可视作Bundle整体的左上角位置
+    public Vector2 leftTopPosition;
 
-    //若整个无限滚动列表有n个GridBundle，则该参数表示该GridBundle在列表中从1开始的索引，这对于确定当前滚动进度很重要，因为在滑动过程中我们只记录视口内的若干GridBundle
+    //若整个无限滚动列表有n个GridBundle，则该参数表示该GridBundle在列表中从1开始的编号（不从0开始，不用于索引数组）
+    //这对于确定当前滚动进度很重要，因为在滑动过程中我们只记录视口内的若干GridBundle
     public int locateIdx;
 
     //传入该Bundle内的列表元素数量进行构造，注意如果是最后一个Bundle则可能存不满
@@ -26,7 +29,7 @@ public class GridBundle<TGrid> : IPoolObject where TGrid : MonoBehaviour
     }
 
     //实现IPoolObject要求的函数，用于清空该Bundle状态而回收到对象池中
-    public void Reset()
+    public void ResetPoolObject()
     {
         //无效化定位索引
         locateIdx = -1;
@@ -56,15 +59,9 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     //维护列表元素数据，而元素对象则间接通过GridBundle由对象池动态管理
     public ICollection<TGridData> GridDatas { get; private set; }
 
-    //anchorMin和anchorMax分别表示左下角和右上角锚点，x和y的取值范围为0~1，这两点定义了一个锚点区域，UI元素会相对于该区域进行定位和大小计算
-    //若两者均为Vector2(0.5f,0.5f)而重合，则UI元素固定在父容器的中心点，可通过anchoredPosition调整相对位置，通过rect或sizeDelta控制大小
-    //若anchorMin为Vector2(0,0.5f)即左中、anchorMax为Vector2(1,0.5f)即右中，即锚点水平方向分开、垂直方向重合，则该UI元素会水平拉伸适应父UI而垂直固定
-    //若anchorMin为Vector2(0.5f,0)即中下、anchorMax为Vector2(0.5f,1)即中上，即锚点垂直方向分开、水平方向重合，则该UI元素会垂直拉伸适应父UI而水平固定
-    //若anchorMin为Vector2(0,0)即左下、anchorMax为Vector2(1,1)即右上，则该UI元素会完全拉伸适应父UI的宽高达到四边贴合的效果
-    //RectTransform.rect的width/height表示UI元素实际的世界空间尺寸
-    //RectTransform.sizeDelta的x/y表示UI元素相对于锚点参考尺寸的偏移
-    //rect.width = 父对象宽度 * (anchorMax.x - anchorMin.x) + sizeDelta.x
-    //rect.height = 父对象高度 * (anchorMax.y - anchorMin.y) + sizeDelta.y
+    //注意只有在两锚点重合时，sizeDelta.x/y才正好和rect.width/height相等，此时才能将其当作尺寸来用
+    //sizeDelta.x = rect.width - 父对象宽度* (anchorMax.x - anchorMin.x)
+    //sizeDelta.y = rect.height - 父对象高度* (anchorMax.y - anchorMin.y)
     public Vector2 GridSize => gridPrefab.GetComponent<RectTransform>().sizeDelta; //获取单个列表元素的尺寸
     public Vector2 GridSlotSize => GridSize + gridSpacing; //获取单个列表元素的含间距占位尺寸
     #endregion
@@ -107,15 +104,6 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         UpdateDisplay();
 
         //刷新视口内所有元素的视图
-        RefreshVisibleGridBundlesView();
-    }
-
-    //数据的长度发生变化的时候使用这个函数刷新一下
-    public void Refresh(bool _resetContentPos = false)
-    {
-        RecalculateContentSize(_resetContentPos);
-        contentRect.anchoredPosition = _resetContentPos ? Vector2.zero : contentRect.anchoredPosition;
-        UpdateDisplay();
         RefreshVisibleGridBundlesView();
     }
 
@@ -190,7 +178,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         else if (scrollDirection == ScrollDirection.Horizontal)
             offset = new Vector2(-GridSlotSize.x, 0);
 
-        Vector2 newHeadBundlePos = bundle.position + offset;
+        Vector2 newHeadBundlePos = bundle.leftTopPosition + offset;
 
         while (IsInViewport(newHeadBundlePos))
         {
@@ -204,7 +192,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
             bundle = GetGridBundle(index, newHeadBundlePos, GridSize, gridSpacing);
             visibleGridBundles.AddFirst(bundle);
 
-            newHeadBundlePos = bundle.position + offset;
+            newHeadBundlePos = bundle.leftTopPosition + offset;
         }
     }
 
@@ -216,7 +204,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         if (scrollDirection == ScrollDirection.Vertical)
         {
             GridBundle<TGrid> bundle = visibleGridBundles.First.Value;
-            while (IsAboveViewport(bundle.position))
+            while (IsAboveViewport(bundle.leftTopPosition))
             {
                 //进入对象池
                 ReleaseGridBundle(bundle);
@@ -230,7 +218,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         else if (scrollDirection == ScrollDirection.Horizontal)
         {
             GridBundle<TGrid> bundle = visibleGridBundles.First.Value;
-            while (IsInViewportLeft(bundle.position))
+            while (IsInViewportLeft(bundle.leftTopPosition))
             {
                 //进入对象池
                 ReleaseGridBundle(bundle);
@@ -253,7 +241,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         else if (scrollDirection == ScrollDirection.Horizontal)
             offset = new Vector2(GridSlotSize.x, 0);
 
-        Vector2 newTailBundlePos = bundle.position + offset;
+        Vector2 newTailBundlePos = bundle.leftTopPosition + offset;
 
         while (IsInViewport(newTailBundlePos))
         {
@@ -267,7 +255,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
             bundle = GetGridBundle(index, newTailBundlePos, GridSize, gridSpacing);
             visibleGridBundles.AddLast(bundle);
 
-            newTailBundlePos = bundle.position + offset;
+            newTailBundlePos = bundle.leftTopPosition + offset;
         }
     }
 
@@ -279,7 +267,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         if (scrollDirection == ScrollDirection.Vertical)
         {
             GridBundle<TGrid> bundle = visibleGridBundles.Last.Value;
-            while (IsBelowViewport(bundle.position))
+            while (IsBelowViewport(bundle.leftTopPosition))
             {
                 //进入对象池
                 ReleaseGridBundle(bundle);
@@ -293,7 +281,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         else if (scrollDirection == ScrollDirection.Horizontal)
         {
             GridBundle<TGrid> bundle = visibleGridBundles.Last.Value;
-            while (IsInViewportRight(bundle.position))
+            while (IsInViewportRight(bundle.leftTopPosition))
             {
                 //进入对象池
                 ReleaseGridBundle(bundle);

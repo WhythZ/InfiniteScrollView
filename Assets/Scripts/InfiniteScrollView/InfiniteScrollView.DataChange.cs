@@ -70,26 +70,10 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
 
             #region RefreshGridsInSingleBundle
             //开始刷新Bundle中的每个Grid
-            int _iRelative = 0; //相对Bundle内的索引，从0到(_curBundleGridNum - 1)
-            for (int _iAbsolute = _bundleHeadIdx; _iAbsolute <= _bundleTailIdx && _iRelative < _curBundleGridNum; _iAbsolute++, _iRelative++)
+            int _iRelative = 0; //Grid相对Bundle内的索引，在从0到(_curBundleGridNum - 1)的范围内
+            int _iAbsolute = _bundleHeadIdx; //Grid相对所有Grid的索引，在从0到(GridDatas.Count-1)的范围内
+            for (; _iAbsolute <= _bundleTailIdx && _iRelative < _curBundleGridNum; _iAbsolute++, _iRelative++)
                 ResetGrid(_bundle.Grids[_iRelative], GridDatas.ElementAt(_iAbsolute), _iAbsolute); //刷新该Grid
-
-            //若当前是最后一个Bundle则隐藏多余的Grid
-            if (_flagReachedFinalBundle == true)
-            {
-                while (_iRelative < _curBundleGridNum)
-                {
-                    try
-                    {
-                        _bundle.Grids[_iRelative].gameObject.SetActive(false);
-                        _iRelative++;
-                    }
-                    catch (System.Exception)
-                    {
-                        throw;
-                    }
-                }
-            }
             #endregion
         }
 
