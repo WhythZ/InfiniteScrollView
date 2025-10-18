@@ -388,6 +388,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scrollDirection: 0
   gridPrefab: {fileID: 2332130290619924252, guid: d5c7c0ccd6c423949bf6df83e3dac5ce, type: 3}
+  viewportRect: {fileID: 1324901137}
   contentRect: {fileID: 1048259842}
   gridSpacing: {x: 0, y: 10}
   rowOrColCount: 3
@@ -1452,6 +1453,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scrollDirection: 1
   gridPrefab: {fileID: 2332130290619924252, guid: d5c7c0ccd6c423949bf6df83e3dac5ce, type: 3}
+  viewportRect: {fileID: 820486841}
   contentRect: {fileID: 1724153452}
   gridSpacing: {x: 10, y: 0}
   rowOrColCount: 6

@@ -14,9 +14,6 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     //池中元素GridBundle是一行或一列TGrid（修饰readonly使得该容器无法被赋值为其它新容器或null，但其内容可以被改变，例如调用Enqueue/Dequeue/Clear等方法）
     private readonly Queue<GridBundle<TGrid>> gridBundlePool = new Queue<GridBundle<TGrid>>();
 
-    //需子类实现（因为这取决于TGrid数据结构，这又取决于业务需求）的抽象方法，用于更新单个格子的数据和视图
-    protected abstract void ResetGrid(TGrid _gridInstance, TGridData _gridData, int _gridIdx);
-
     //回收一个GridBundle元素
     private void ReleaseGridBundle(GridBundle<TGrid> _gridBundle)
     {
@@ -27,7 +24,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     }
 
     //获取一个GridBundle元素并放到对应位置，传入的是Bundle整体的左上角位置（因为每个Grid锚点和轴心都在左上角）
-    private GridBundle<TGrid> GetGridBundle(int _locateIdx, Vector2 _leftTopPostion, Vector2 _gridSize, Vector2 _gridSpacing)
+    private GridBundle<TGrid> GetGridBundle(int _locateIdx, Vector2 _leftTopPostion)
     {
         //用来引用队列池中Bundle
         GridBundle<TGrid> _bundle;
@@ -35,9 +32,9 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         //该值用于针对垂直或水平样式，计算格子所需水平或垂直方向偏移
         Vector2 _gridOffsetInBundle = default;
         if (scrollDirection == ScrollDirection.Vertical)
-            _gridOffsetInBundle = new Vector2(_gridSize.x + _gridSpacing.x, 0);
+            _gridOffsetInBundle = new Vector2(GridSlotSize.x, 0);
         else if (scrollDirection == ScrollDirection.Horizontal)
-            _gridOffsetInBundle = new Vector2(0, -(_gridSize.y + _gridSpacing.y));
+            _gridOffsetInBundle = new Vector2(0, -GridSlotSize.y);
 
         //若此时池中无对象可用则创建新对象以扩容，否则从队列池中取出复用
         if (gridBundlePool.Count == 0)
@@ -105,11 +102,14 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     }
 
     //清除池中所有实例
-    public void ClearAllPoolObjects()
+    private void ClearAllPoolObjects()
     {
         //当前可见的
         visibleGridBundles.Clear();
         //暂不可见的
         gridBundlePool.Clear();
     }
+
+    //需子类实现（因为这取决于TGrid数据结构，这又取决于业务需求）的抽象方法，用于更新单个格子的数据和视图
+    protected abstract void ResetGrid(TGrid _gridInstance, TGridData _gridData, int _gridIdx);
 }

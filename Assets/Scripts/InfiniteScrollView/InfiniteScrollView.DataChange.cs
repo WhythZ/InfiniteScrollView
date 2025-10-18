@@ -6,7 +6,7 @@ using System.Linq;
 public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehaviour where TGrid : MonoBehaviour
 {
     //若目标Grid（传入的是列表元素的绝对索引）在视口范围内，则刷新其视图显示
-    public bool RefreshGridViewIfVisible(int _gridIdxAbsolute)
+    protected bool RefreshGridViewIfVisible(int _gridIdxAbsolute)
     {
         //排除非法索引
         if (_gridIdxAbsolute < 0 || _gridIdxAbsolute >= GridDatas.Count)
@@ -36,10 +36,10 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     }
 
     //刷新视口内所有Grid的视图显示
-    public void RefreshVisibleGridBundlesView()
+    protected void RefreshVisibleGridBundlesView()
     {
         //视口内没有东西就不刷新
-        if (visibleGridBundles.Count() == 0)
+        if (visibleGridBundles.Count == 0)
             return;
 
         //遍历视口范围内的所有GridBundle并刷新Grid
@@ -78,7 +78,7 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
         }
 
         //隐藏视口外的GridBundle
-        int _countRemain = visibleGridBundles.Count() - _countReachedBundle;
+        int _countRemain = visibleGridBundles.Count - _countReachedBundle;
         while (_countRemain > 0)
         {
             _countRemain--;
@@ -89,14 +89,16 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
     }
 
     //增删列表元素时时需调用该函数刷新Content尺寸，起到类似ContentSizeFitter组件的作用
-    public void RecalculateContentSize(bool _resetContentPos)
+    private void RecalculateContentSize(bool _resetContentPos)
     {
-        //根据滚动方向调整Content的尺寸，需注意由于两个锚点不同，故rect.width/height和sizeDelta.x/y的含义不同
+        //根据滚动方向调整Content的尺寸
         if (scrollDirection == ScrollDirection.Vertical)
         {
             //垂直滚动视图情况下，让Content水平方向上拉伸适应父对象Viewport的宽度，垂直方向上向父对象Viewport的上侧对齐
             contentRect.anchorMin = new Vector2(0, 1);
             contentRect.anchorMax = new Vector2(1, 1);
+            //轴心和Grid统一在左上角，方便计算
+            contentRect.pivot = new Vector2(0, 1);
 
             //宽度固定跟随父对象，故此处只用重新计算高度
             //rect.width = 父对象宽度 + sizeDelta.x
@@ -109,6 +111,8 @@ public abstract partial class InfiniteScrollView<TGrid, TGridData> : MonoBehavio
             //水平滚动视图情况下，让Content垂直方向上拉伸适应父对象Viewport的高度，水平方向上向父对象Viewport的左侧对齐
             contentRect.anchorMin = new Vector2(0, 0);
             contentRect.anchorMax = new Vector2(0, 1);
+            //轴心和Grid统一在左上角，方便计算
+            contentRect.pivot = new Vector2(0, 1);
 
             //高度固定跟随父对象，故此处只用重新计算宽度
             //rect.width = sizeDelta.x

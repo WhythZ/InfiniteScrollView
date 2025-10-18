@@ -19,5 +19,7 @@ public class TestGrid : MonoBehaviour
     {
         iconImg.sprite = _sprite;
         descTxt.text = _text;
+        GetComponent<Button>().onClick.RemoveAllListeners();
+        GetComponent<Button>().onClick.AddListener(() => Debug.LogError("Click " + _text));
     }
 }
